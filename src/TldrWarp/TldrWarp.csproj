@@ -15,4 +15,11 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Walterlv.Win32.Source" Version="7.8.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
 </Project>

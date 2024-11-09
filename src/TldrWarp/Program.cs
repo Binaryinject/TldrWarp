@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
-using System.Reflection;
-using Microsoft.Win32;
-using static Microsoft.Win32.Registry;
+using GrassDemoPark.WPF2.Tiny.RegEdit;
 
-if (args.Length == 0) AssociateFileExtension(".tldr", "tldrawfile", Assembly.GetEntryAssembly().Location.Replace(".dll", ".exe"));
+if (args.Length == 0) await AssociateFileExtension(".tldr", "tldrfile", Process.GetCurrentProcess().MainModule.FileName);
 else if (args.Length > 0 && File.Exists(args[0])) {
     await ExecuteCommand("");
     await ExecuteCommand(args[0]);
@@ -11,23 +9,34 @@ else if (args.Length > 0 && File.Exists(args[0])) {
 
 return;
 
-static void AssociateFileExtension(string extension, string fileType, string appName) {
-    // 步骤 1：判断关联是否存在
-    using RegistryKey? key = ClassesRoot.OpenSubKey(extension);
-    if (key == null) {
-        // 步骤 2：创建文件类型
-        using RegistryKey fileTypeKey = ClassesRoot.CreateSubKey(fileType);
-        // 步骤 3：创建关联键
-        using RegistryKey extensionKey = fileTypeKey.CreateSubKey(@"shell\open\command");
-        // 步骤 4：设置关联应用程序信息
-        extensionKey.SetValue(null, $"\"{appName}\" \"%1\"");
+async Task AssociateFileExtension(string extension, string fileType, string appName) {
+    Console.WriteLine(appName);
+    var registerFile = new RegisterFileExtension(extension);
+    registerFile.OpenWithProgramIds.Add(fileType);
+    registerFile.WriteToCurrentUser();
 
-        // 设置关联应用程序图标信息（可选）
-        using (RegistryKey iconKey = fileTypeKey.CreateSubKey("DefaultIcon"))
-        {
-            iconKey.SetValue(null, $"{appName},0");
-        }
-    }
+    var registerProgram = new RegisterProgram(fileType);
+    registerProgram.TypeName = "Tldr Document";
+    registerProgram.DefaultIcon = $"{appName},0";
+    registerProgram.FriendlyTypeName = "tldraw的工程文件";
+    registerProgram.Operation = "open";
+    registerProgram.Command = $"\"{appName}\" \"%1\"";
+    registerProgram.WriteToCurrentUser();
+    await RunCMD("taskkill /im explorer.exe /f");
+    await RunCMD("ping -n 2 127.0.0.1 > nul");
+    await RunCMD("explorer.exe");
+}
+
+async Task RunCMD(string command) {
+    var process = new Process();
+    process.StartInfo.FileName = "cmd.exe";
+    process.StartInfo.Arguments = "/c " + command;
+    process.StartInfo.UseShellExecute = false;
+    process.StartInfo.CreateNoWindow = true;
+    process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+    process.StartInfo.RedirectStandardOutput = true;
+    process.Start();
+    await process.WaitForExitAsync();
 }
 
 async Task ExecuteCommand(string command) {
