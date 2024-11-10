@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using GrassDemoPark.WPF2.Tiny.RegEdit;
 
-if (args.Length == 0) await AssociateFileExtension(".tldr", "tldrfile", Process.GetCurrentProcess().MainModule.FileName);
+if (args.Length == 0) AssociateFileExtension(".tldr", "tldrfile", Process.GetCurrentProcess().MainModule.FileName);
 else if (args.Length > 0 && File.Exists(args[0])) {
     await ExecuteCommand("");
     await ExecuteCommand(args[0]);
@@ -9,7 +10,10 @@ else if (args.Length > 0 && File.Exists(args[0])) {
 
 return;
 
-async Task AssociateFileExtension(string extension, string fileType, string appName) {
+[DllImport("shell32.dll")]
+static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2); 
+
+void AssociateFileExtension(string extension, string fileType, string appName) {
     Console.WriteLine(appName);
     var registerFile = new RegisterFileExtension(extension);
     registerFile.OpenWithProgramIds.Add(fileType);
@@ -22,9 +26,9 @@ async Task AssociateFileExtension(string extension, string fileType, string appN
     registerProgram.Operation = "open";
     registerProgram.Command = $"\"{appName}\" \"%1\"";
     registerProgram.WriteToCurrentUser();
-    await RunCMD("taskkill /im explorer.exe /f");
-    await RunCMD("ping -n 2 127.0.0.1 > nul");
-    await RunCMD("explorer.exe");
+    
+    //立即刷新图标
+    SHChangeNotify(0x8000000, 0, IntPtr.Zero, IntPtr.Zero);
 }
 
 async Task RunCMD(string command) {
